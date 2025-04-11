@@ -115,25 +115,6 @@ namespace generic {
     }
 
 INTEGRAL_BINARY(uint16_t);
-// namespace generic {
-//     template <> struct BinaryDataInterface<uint16_t> {
-//         static void write(const uint16_t& val, BinaryBuffer& buffer) {
-//             auto bytes = std::bit_cast<std::array<uint8_t, sizeof(uint16_t)>>(val);
-//             for (const auto byte : bytes) {
-//                 buffer.write_byte(byte);
-//             };
-//         }
-
-//         static uint16_t read(BinaryBuffer& buffer) {
-//             uint16_t value{};
-//             for (auto x = 0; x < sizeof(uint16_t); x++) {
-//                 value |= (buffer.next_byte() << x * 8);
-//             }
-//             return std::byteswap(value);
-//         }
-//     };
-// } // namespace generic
-
 INTEGRAL_BINARY(int16_t);
 INTEGRAL_BINARY(uint32_t);
 INTEGRAL_BINARY(int32_t);

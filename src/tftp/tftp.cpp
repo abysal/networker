@@ -1,5 +1,6 @@
 #include "./tftp.hpp"
 #include <cstdint>
+#include <fstream>
 #include <iphlpapi.h>
 #include <memory>
 #include <minwinbase.h>
@@ -72,7 +73,24 @@ namespace tftp {
     }
 
     std::vector<uint8_t> TFTPServer::read_file(const std::string& file_name) {
-        return std::views::iota(1, 2059) | std::ranges::to<std::vector<uint8_t>>();
+        std::ifstream file{file_name, std::ios::binary | std::ios::ate};
+
+        if (!file.is_open()) {
+            const auto error = std::format("Error: {}", errno);
+            std::println("{}", error);
+
+            return {};
+        }
+
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::vector<uint8_t> buffer(size);
+        if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+            return {};
+        }
+
+        return buffer;
     }
 
     void TFTPServer::instance() {
@@ -92,7 +110,7 @@ namespace tftp {
     TFTPServer::handle_read_client(sockaddr* addr, int addr_size, ReadOpenConnection request) {
         auto client_socket = this->allocate_socket();
         int  timeout       = 5000;
-        //setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(int));
+        setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(int));
 
         std::array<uint8_t, 1024> resource{};
 
@@ -101,6 +119,16 @@ namespace tftp {
         };
 
         const auto data = this->read_file(request.filename);
+
+        if (data.empty()) {
+            socket.write(ErrorMessage{
+                .code    = TFTPErrorCode::FILE_NOT_FOUND,
+                .message = std::format("File, \"{}\" was not found!", request.filename)
+            });
+            socket.send();
+
+            return;
+        }
 
         bool more_packets = true;
 
